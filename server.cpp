@@ -1,0 +1,80 @@
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <stdlib.h>
+#include <fstream>
+#include <vector>
+#include <stdio.h>
+#include <queue>
+#include <string>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/sem.h>
+#include <sys/wait.h>
+#include <unistd.h>	
+
+int main()
+{
+    int num_fork;
+    int max_fork;
+    int sock, listener;
+    struct sockaddr_in socket_info;
+    char buf[1024];
+    int bytes_read;
+
+    listener = socket(AF_INET, SOCK_STREAM, 0);
+    if(listener < 0)
+    {
+        perror("socket");
+        exit(1);
+    }
+    
+    socket_info.sin_family = AF_INET;
+    socket_info.sin_port = htons(3425);
+    socket_info.sin_addr.s_addr = INADDR_ANY;
+    if(bind(listener, (struct sockaddr *)&socket_info, sizeof(socket_info)) < 0)
+    {
+        perror("error");
+        exit(2);
+    }
+
+    listen(listener, 1);
+    
+    while(1)
+    {
+        sock = accept(listener, NULL, NULL);
+	
+        if (sock < 0)
+        {
+            perror("error");
+            exit(3);
+        }
+        
+        switch(fork())
+        {
+        case -1:
+            perror("fork");
+            break;
+            
+        case 0:
+            close(listener);
+            while(1)
+            {
+                bytes_read = recv(sock, buf, 1024, 0);
+                if(bytes_read <= 0) break;
+                send(sock, buf, bytes_read, 0);
+            }
+	
+            close(sock);
+            _exit(0);
+            
+        default:
+            close(sock);
+        }
+    }
+    
+    close(listener);
+
+    return 0;
+}
