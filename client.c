@@ -37,7 +37,7 @@ int main(int argc, char** argv)
         exit(2);
     }
 
-    memcpy(buf,argv[2],1024);
+    memcpy(buf,argv[1],1024);
     write(sock,buf,sizeof(buf));
     while (1)
 	{
