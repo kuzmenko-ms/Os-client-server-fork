@@ -1,25 +1,14 @@
+#include <pthread.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <memory.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <stdlib.h>
-#include <fstream>
-#include <vector>
-#include <stdio.h>
-#include <queue>
-#include <string>
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/sem.h>
-#include <sys/wait.h>
-#include <unistd.h>	
-
 int main()
 {
-    int num_fork;
-    int max_fork;
     int sock, listener;
-    struct sockaddr_in socket_info;
+    struct sockaddr_in addr;
     char buf[1024];
     int bytes_read;
 
@@ -30,12 +19,12 @@ int main()
         exit(1);
     }
     
-    socket_info.sin_family = AF_INET;
-    socket_info.sin_port = htons(3425);
-    socket_info.sin_addr.s_addr = INADDR_ANY;
-    if(bind(listener, (struct sockaddr *)&socket_info, sizeof(socket_info)) < 0)
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(3425);
+    addr.sin_addr.s_addr = INADDR_ANY;
+    if(bind(listener, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
-        perror("error");
+        perror("bind");
         exit(2);
     }
 
@@ -44,10 +33,9 @@ int main()
     while(1)
     {
         sock = accept(listener, NULL, NULL);
-	
-        if (sock < 0)
+        if(sock < 0)
         {
-            perror("error");
+            perror("accept");
             exit(3);
         }
         
@@ -65,9 +53,9 @@ int main()
                 if(bytes_read <= 0) break;
                 send(sock, buf, bytes_read, 0);
             }
-	
+
             close(sock);
-            _exit(0);
+            exit(0);
             
         default:
             close(sock);

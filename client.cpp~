@@ -1,46 +1,53 @@
+#include <pthread.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <memory.h>
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <stdlib.h>
-#include <fstream>
-#include <vector>
-#include <stdio.h>
-#include <string>
-#include <sys/types.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/sem.h>
-#include <sys/wait.h>
-#include <unistd.h>	
-char message[] = "Hello there!\n";
-char buf[sizeof(message)];
+#include <arpa/inet.h>
 
-int main()
+
+int main(int argc, char** argv)
 {
     int sock;
-    struct sockaddr_in socket_info;
+    char buf[1024];
+    
+
+    if(argc < 3)
+    {
+        printf("usage: ./client xxx.xxx.xxx.xxx filename\n");
+        return;
+    }
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
     if(sock < 0)
     {
-        perror("error");
+        perror("socket");
         exit(1);
     }
-
-    socket_info.sin_family = AF_INET;
-    socket_info.sin_port = htons(3425);
-    socket_info.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    if(connect(sock, (struct sockaddr *)&socket_info, sizeof(socket_info)) < 0)
+    struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(3420);
+    addr.sin_addr.s_addr = inet_addr(argv[1]);
+    if(connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
         perror("connect");
         exit(2);
     }
+    printf("\nconnect open\n");
+    printf("%s\n",argv[1]);
 
-    send(sock, message, sizeof(message), 0);
-    recv(sock, buf, sizeof(message), 0);
-    
-    printf(buf);
+    memcpy(buf,argv[2],1024);
+    write(sock,buf,sizeof(buf));
+
+    while (1)
+    {
+        int bytes_read = recv(sock, buf, sizeof(buf), 0);
+        if(bytes_read <= 0) break;
+        printf("%s",buf);
+    }
+    printf("end\n");
     close(sock);
-
-    return 0;
 }
