@@ -38,13 +38,12 @@ int main(int argc, char** argv)
     }
 
     memcpy(buf,argv[1],1024);
-    write(sock,buf,sizeof(buf));
+    send(sock,buf,sizeof(buf),0);
     while (1)
 	{
 		int bytes_read = recv(sock, buf , sizeof(buf),0);
 		if(bytes_read<=0) break;
 		printf("%s",buf);
 	}
-	printf("end\n");
 	close(sock);
 }

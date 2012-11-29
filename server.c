@@ -5,7 +5,12 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <sys/sem.h>
+#include <sys/shm.h>
 
+static struct sembuf sop_lock = {
+	0, -1, 0
+};
 
 
 int main(int argc, char** argv)
@@ -23,6 +28,12 @@ int main(int argc, char** argv)
 	char buf[1024];
 	int bytes_read;
 	int numb_client;
+//if(mas_shmid=shmget(IPC_PRIVATE,sizeof(int *) * vsrt.size(), IPC_CREATE|0666))<0)	
+	//{
+	//	perror("Created error");
+	//	exit(EXIT_FAILURE);
+	//}
+
 	listener = socket(AF_INET, SOCK_STREAM, 0);
 	if(listener < 0)
 	{
@@ -40,11 +51,27 @@ int main(int argc, char** argv)
 	}
 
 	listen(listener, 1);
+	int semid;
+	semid = semget(IPC_PRIVATE, 1, 0666|IPC_CREAT);
+	if(semid == -1)
+	{
+		perror("Semophore creation failed\n");
+		exit(EXIT_FAILURE);
+	}
+	
+	struct sembuf sop_unlock;
+	sop_unlock.sem_num=0;
+	sop_unlock.sem_flg=0;
+	sop_unlock.sem_op=atoi(argv[1]);
+	listen(listener, 1);
+	semop(semid,&sop_unlock,1);
+	sop_unlock.sem_op = 1;
+
 
 	while(1)
 	{
 		sock = accept(listener, NULL, NULL);
-		numb_client++;
+		//numb_client++;
 		if(sock < 0)
 		{
 			perror("accept");
@@ -58,6 +85,8 @@ int main(int argc, char** argv)
 			break;
 
 		case 0:
+			semop(semid, &sop_lock, 1);
+
 			close(listener);
 			while(1)
 			{
@@ -100,7 +129,9 @@ int main(int argc, char** argv)
 			}
 			fclose(file);
 			close(sock);
-			numb_client--;
+			semop(semid, &sop_unlock, 1); 
+
+			//numb_client--;
 			exit(0);
 		}
 	}
@@ -111,6 +142,8 @@ int main(int argc, char** argv)
 }
 
 close(listener);
+semctl (semid,0, IPC_RMID, 0);
+
 
 return 0;
 }
